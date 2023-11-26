@@ -6,6 +6,7 @@ class MRFlight(MRJob):
     def steps(self):
         return [
             MRStep(mapper=self.mapper,
+                   combiner=self.combiner,
                    reducer=self.reducer)
         ]
 
@@ -21,7 +22,18 @@ class MRFlight(MRJob):
             arrival_delay = 0
         departure_delay = float(departure_delay)
         arrival_delay = float(arrival_delay)
-        yield month, (departure_delay, arrival_delay)
+        month = int(month)
+        yield f'{month:02d}', (departure_delay, arrival_delay)
+
+    def combiner(self, key, values):
+        total_departure_delay = 0
+        total_arrival_delay = 0
+        num_elements = 0
+        for value in values:
+            total_departure_delay += value[0]
+            total_arrival_delay += value[1]
+            num_elements += 1
+        yield key, (total_departure_delay, total_arrival_delay, num_elements)
 
     def reducer(self, key, values):
         total_departure_delay = 0
@@ -30,7 +42,7 @@ class MRFlight(MRJob):
         for value in values:
             total_departure_delay += value[0]
             total_arrival_delay += value[1]
-            num_elements += 1
+            num_elements += value[2]
         yield key, (total_departure_delay/num_elements, total_arrival_delay/num_elements)
 
 if __name__=='__main__':
